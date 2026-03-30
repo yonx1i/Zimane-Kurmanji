@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>زمانی کورمانجی</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --border-color: #333333;
+            --success-color: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+            color: var(--accent-color);
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+
+        .converter-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .converter-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        label {
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        textarea {
+            width: 100%;
+            height: 250px;
+            background-color: #2a2a2a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-color);
+        }
+
+        .output-area {
+            position: relative;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.1s;
+            font-size: 0.9rem;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background-color: #444;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #555;
+        }
+
+        .char-count {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--success-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>زمانی کورمانجی</h1>
+        <p class="subtitle">تحويل اللغة الكردية بالأبجدية اللاتينية إلى الأبجدية السورانية</p>
+
+        <div class="converter-grid">
+            <div class="field-group">
+                <label for="input">النص بالكرمانجية (لاتيني):</label>
+                <textarea id="input" placeholder="اكتب النص هنا... (مثال: Ez te hezdikim)"></textarea>
+            </div>
+            <div class="field-group">
+                <label for="output">النتيجة (سوراني):</label>
+                <textarea id="output" readonly placeholder="النتيجة ستظهر هنا..."></textarea>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="char-count">عدد الأحرف: <span id="count">0</span></div>
+            <div class="btn-group">
+                <button id="clearBtn" class="btn-secondary">مسح النص</button>
+                <button id="copyBtn" class="btn-primary">نسخ النتيجة</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">تم النسخ بنجاح!</div>
+
+    <script>
+        const inputArea = document.getElementById('input');
+        const outputArea = document.getElementById('output');
+        const copyBtn = document.getElementById('copyBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const charCount = document.getElementById('count');
+        const toast = document.getElementById('toast');
+
+        // قائمة الكلمات التي تحول h إلى ح
+        const hToHaWords = [
+            'hez', 'hezdikim', 'hezkirin', 'heval', 'hizir', 'huner', 'hal', 'heq', 'hacet', 'heyat', 'heyf', 'hukum', 'hukumet'
+        ];
+
+        // خريطة التحويل الأساسية
+        const mapping = {
+            'a': 'ا',
+            'b': 'ب',
+            'c': 'ج',
+            'ç': 'چ',
+            'd': 'د',
+            'e': 'ە',
+            'ê': 'ێ',
+            'f': 'ف',
+            'g': 'گ',
+            'h': 'ه',
+            'i': '',
+            'î': 'ی',
+            'j': 'ژ',
+            'k': 'ك',
+            'l': 'ل',
+            'm': 'م',
+            'n': 'ن',
+            'o': 'ۆ',
+            'p': 'پ',
+            'q': 'ق',
+            'r': 'ر',
+            's': 'س',
+            'ş': 'ش',
+            't': 'ت',
+            'u': 'و',
+            'û': 'وو',
+            'v': 'ڤ',
+            'w': 'و',
+            'x': 'خ',
+            'y': 'ی',
+            'z': 'ز'
+        };
+
+        function convert(text) {
+            if (!text) return '';
+
+            // تقسيم النص إلى كلمات مع الحفاظ على الفراغات وعلامات الترقيم
+            const words = text.split(/(\s+|[.,!?;:()])/);
+            
+            const convertedWords = words.map(word => {
+                if (!word || /^\s+$/.test(word) || /^[.,!?;:()]$/.test(word)) {
+                    return word;
+                }
+
+                let lowerWord = word.toLowerCase();
+                let result = '';
+
+                // قاعدة (2): حرف العين (ع)
+                // إذا بدأت الكلمة بـ îra (مثل îraq)
+                if (lowerWord.startsWith('îra')) {
+                    lowerWord = 'ع' + lowerWord.substring(1);
+                }
+
+                // قاعدة (1): حرف h
+                // التحقق إذا كانت الكلمة تبدأ بإحدى الكلمات في قائمة hToHaWords
+                let useHa = hToHaWords.some(hWord => lowerWord.startsWith(hWord));
+                
+                for (let i = 0; i < lowerWord.length; i++) {
+                    let char = lowerWord[i];
+                    
+                    // معالجة الهمزة في بداية الكلمة (إذا بدأت بحرف علة)
+                    if (i === 0 && ['a', 'e', 'ê', 'i', 'î', 'o', 'u', 'û'].includes(char)) {
+                        result += 'ئ';
+                    }
+
+                    if (char === 'h' && useHa) {
+                        result += 'ح';
+                    } else if (mapping[char] !== undefined) {
+                        result += mapping[char];
+                    } else {
+                        result += char;
+                    }
+                }
+
+                return result;
+            });
+
+            return convertedWords.join('');
+        }
+
+        inputArea.addEventListener('input', () => {
+            const text = inputArea.value;
+            outputArea.value = convert(text);
+            charCount.textContent = text.length;
+        });
+
+        copyBtn.addEventListener('click', () => {
+            if (!outputArea.value) return;
+            
+            outputArea.select();
+            document.execCommand('copy');
+            
+            // إظهار التنبيه
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            inputArea.value = '';
+            outputArea.value = '';
+            charCount.textContent = '0';
+            inputArea.focus();
+        });
+    </script>
+</body>
+</html>
